@@ -835,23 +835,27 @@ src/MsgExtended.cpp 移除固定 payapp 通用 URL。原生请求入口、协议
 移除昵称/手机号/地区拼接收货地址的路径。账号资料不等于收货地址列表；
 尚缺地址服务的请求构造、提交和响应映射，现返回明确失败。
 
-### 5. GetQRCode（未完成）
+### 5. GetQRCode（已实现新版原生路径）
 
-移除无账号归属的缓存、全内存首条匹配和传入 URL 回显。
-普通本机静态字符串线索：URI RVA 0x9299080，Request/Response 名称
-RVA 0x96D0398/0x96D04A8；有限 MOV/LEA 引用搜索未找到入口，不证明功能不存在。
-尚未确认异步 scene、构造/销毁与字段，当前明确失败。SetQRCode 人工注入路径也被禁用。
+SelfQrRoute.h → SelfQrNative.h → SelfQrCgi.h → 原生 CGI 168。
+先前的全内存扫描、缓存和 URL 回显已移除；当前查询当前账号二维码，不重置。
+本轮确认请求构造、异步场景、服务端返回 field 9 URL，并通过 native codec、
+真实原生查询及微信进程内短时生产 HTTP 验证。完整 Hook DLL 未构建部署。
+具体入口、PB 字段、生命周期与验证边界见文末专项实现补充和
+[GetQRCode 实现记录](self-qrcode-status-4.1.15.55.md)。
 
-### 6. EditSelfNickname（新版未完成）
+### 6. EditSelfNickname（已适配 4.1.15.55）
 
-保留旧版实现和严格构建校验，未将 4.1.15.13 偏移移植成新版常量。
-4.1.15.55 仍拒绝调用。需要独立核验新版 GetProfile/Oplog、codec、分配器与异步 ABI，
-再做账号关联及服务端回读；旧版实测不计入本轮完成项。
+新版 GetProfile/Oplog 构造、异步入口及 ABI 已分别核验；保留未知资料字段，提交后从服务端回读。
+本轮 native codec、协议/HTTP 和真实改为 test 后恢复原昵称均通过，完整 Hook DLL 未部署。
+入口及验证边界见 [新版昵称实现记录](edit-self-nickname-4.1.15.55.md) 和文末补充。
 
-### 7. mod_self_nick_signature（未完成）
+### 7. mod_self_nick_signature（已适配 4.1.15.55）
 
-新增明确失败路由，无资料修改。待核验签名字段、更新协议及服务端回读；
-不得仅修改 account 缓存或回显 newSignature。
+原生 GetProfile 核对账号后，保留 ModUserInfo 其它及未知字段，仅更新直接字符串 field 13，
+经 Oplog CmdId=1 提交并服务端回读。允许空字符串清空签名，昵称与签名共用 DLL 内写入锁。
+协议、HTTP、native codec、锁互通和真实改为 test 后恢复空签名的验证均通过；昵称未改变。
+完整 Hook DLL 未部署。见 [签名实现与验证](edit-self-signature-4.1.15.55.md) 及文末补充。
 
 ### 8. upload_head_img（未完成）
 
@@ -870,3 +874,116 @@ GetSelfProfile.cpp 的本轮生产对象编译通过；完整 DLL 尚未构建�
 
 本轮最终检查：GetSelfProfile.cpp、MsgExtended.cpp 均由 Zig Windows x64 编译为新对象成功；
 接口集合 JSON 解析及 git diff --check 通过。完整 DLL 未构建部署。
+
+### Busif2fgetqrcodev2 专项定位补充（2026-10-15）
+
+已读取原始 ShowDoc 合约：空对象请求，真实响应字段为 qrcode_url（wxp://f2f…）与脱敏 name。
+新版静态调查定位 TenPayRequest/Response、异步提交候选 RVA 0x53C82B0 和场景构造 0x53C85F0。
+该封装默认 CGI=385，允许覆盖 URI，但没有在已解码路径中提供 CGI 编号替换参数。
+因此不能简单把 URI 换成收款码路径并宣称实现。未对这些候选入口做运行调用。
+具体指令依据、搜索范围、复现工具及仍缺的协议证据见
+[收款二维码专项定位记录](collection-qrcode-status-4.1.15.55.md)。
+生产路由仍明确失败；本补充仅为定位记录，不计作完成的原生实现。
+
+## GetQRCode 本人二维码原生实现（2026-10-15）
+
+已接入 SelfQrRoute → SelfQrNative → SelfQrCgi；CGI 168，URI /cgi-bin/micromsg-bin/getqrcode。
+新版异步提交 RVA 0x1726630，请求构造 0x382BA90（48 字节），scene 构造 0x1726970，
+请求/响应偏移 +0xA8/+0xD8，service 虚表 0x8FCD388；仅用于本次已核验 4.1.15.55 构建。
+旧版 NativeCgi 的偏移和支持范围没有扩大。
+
+请求使用 SKBuiltinString_t 包装当前 wxid，opcode/style=0；scene 补充 BaseRequest。
+Native codec 往返、真实异步请求及微信内短时生产 HTTP 路由均通过；服务端业务码为 0，
+第 9 字段是 44 字节个人二维码链接，直接返回 QRCode_URL 和兼容 qr_url。
+非法参数不提交，业务失败/账号变化/超时不发布链接；超时不自动重试。
+回调复制响应，自有状态及模块 pin 保证晚到回调代码存活；不把提交成功当作业务成功。
+
+详细入口、指令证据、PB、所有权、复现步骤与部署边界见
+[GetQRCode 实现与验证](self-qrcode-status-4.1.15.55.md)。
+完整 Hook DLL 尚未构建部署；无重置二维码、无发消息操作。
+
+
+## EditSelfNickname 4.1.15.55 原生实现与实测（2026-10-15）
+
+生产路径保留 EditSelfNicknameRoute → EditSelfNickname，改用新版账号构建检查和
+SelfQrCgi 中此前已验证的异步 ABI；本轮独立核验以下 GetProfile/Oplog 入口后才复用。
+旧版 NativeCgi 的偏移未更改，其它旧版业务不随本次扩展支持范围。
+
+| 项目 | 当前核验的 RVA / 布局 |
+|---|---|
+| GetProfile 提交 / CGI / 构造 | 0x49A1C0 / 302 / 0x1009600（32 字节） |
+| GetProfile scene / 虚表 / 请求响应 | 0x49A500 / 0x8FDC488 / +0xA8、+0xC8 |
+| Oplog 提交 / CGI / 构造 | 0x19B7D40 / 681 / 0x3B1B040（24 字节） |
+| Oplog scene / 虚表 / 请求响应 | 0x19B8080 / 0x92E4418 / +0xA8、+0xC0 |
+| 原生服务 | manager=*(base+0xBB92FC0)，service=*(manager+0x2C8)，虚表 0x8FCD388 |
+| 部分解析 / 分配 / sized free | 0x697160 / 0x754C41C / 0x754C460 |
+
+只支持核验的 AMD64、timestamp=0x6ACCBF76、SizeOfImage=0xC34F000 构建。
+请求由原生场景复制，回调通过 scene 虚表+0x20 获取响应，不硬编码两种响应偏移。
+每次最多等待 30 秒，超时不自动重试；共享状态和模块 pin 支撑晚到回调。
+
+先 GetProfile 核对服务端账号，保留完整 ModUserInfo 其它及未知字段，仅替换昵称 field 3，
+经 Oplog CmdId=1 提交；业务确认后再次 GetProfile，比对昵称并复核本机账号后才成功。
+同昵称直接返回 verified=true、submitted=false。生产 Edit 和 HTTP 均校验非法输入。
+不写 account 或 SelfInfo，不用回显或提交阶段返回码替代业务结果。
+
+本轮协议测试、生产 HTTP 参数测试、新版 native codec 往返及原生 GetProfile 通过。
+短时生产 HTTP 真实测试两个参数名，同昵称不提交，非法输入均失败。
+经本会话明确授权，将真实账号昵称改为 test 后恢复服务端原昵称，两次均
+ret=0、submitted=true、verified=true；另一次独立 GetProfile 确认已恢复。
+改名前保存 DPAPI 加密恢复备份，确认恢复后已删除；日志未保存明文昵称或账号值。
+MsgExtended.cpp 新对象编译通过；完整 Hook DLL 尚未构建替换部署。
+
+完整证据、复现工具、异步所有权和未实测边界见
+[EditSelfNickname 4.1.15.55 实现与验证](edit-self-nickname-4.1.15.55.md)。
+
+
+## 修改个人签名：4.1.15.55 原生实现（2026-10-15）
+
+EditSelfSignatureRoute → EditSelfSignature → 已核验的新版 GetProfile/Oplog 异步服务。
+接口 POST /api/mod_self_nick_signature，newSignature 字符串，空字符串清空。
+SignatureWire 只替换或新增 ModUserInfo field 13（直接字符串），其余及未知字段保留原字节。
+当前 DLL 的 ModUserInfo 序列化函数 0x101D370，在 0x101D6C1 读取对象+0x58，
+0x101D6C5 指定 field 13，0x101D6CD 调用字符串序列化；公开协议定义及真实业务回读交叉核验。
+
+复用本项目新版昵称接口已核验的 GetProfile 0x49A1C0/构造 0x1009600，
+Oplog 0x19B7D40/构造 0x3B1B040；只适用 AMD64、timestamp=0x6ACCBF76、SizeOfImage=0xC34F000。
+共享原生 ABI 不等于推断签名字段；本轮对 field 13 做了单独静态及业务验证。
+回调、对象复制/释放和超时生命周期沿用新版 helper；旧版 NativeCgi 未扩大支持范围。
+
+先查询完整本人资料并核对账号，再 Oplog CmdId=1，只在命令业务成功、签名回读匹配、
+昵称未变和最终账号复核通过时返回成功。同签名不提交；超时不重试，不回显输入伪造结果。
+SelfProfileMutation.h 提供昵称/签名共享写入锁，两个完整资料写操作在同一 DLL 内串行化。
+跨 DLL、其它客户端及超时后仍在队列中的请求不受此锁协调。
+
+本轮 wire/生产 HTTP 测试、新版 native codec、原生资料查询和生产 HTTP 同签名测试通过。
+持有共享锁时，签名与昵称路由都拒绝提交。昵称路由回归测试通过。
+按用户明确授权，真实改签名为 test 后恢复原来的空签名，两次 ret=0、submitted=true、verified=true；
+独立 GetProfile 确认已恢复且昵称未变化。DPAPI 加密恢复备份确认后已删除。
+完整证据、代码组织、HTTP 合约和工具见 [签名实现记录](edit-self-signature-4.1.15.55.md)。
+完整 Hook DLL 尚未构建替换部署；不将诊断 DLL 结果等同完整代理 DLL 已部署。
+
+签名本轮最终检查：GetSelfProfile.cpp、MsgExtended.cpp 重新编译为 Windows x64 对象均通过；
+Apifox JSON 解析、诊断 runner Python 语法编译与 git diff --check 通过。
+完整 Hook DLL 未构建替换部署。
+
+## 修改头像：4.1.15.55 原生实现（2026-10-15）
+
+生产 POST /api/upload_head_img（filepath）已接入原生 CGI157 /cgi-bin/micromsg-bin/uploadhdheadimg。
+使用自有 scene 实例适配 Pack/Parse，原生 BaseRequest、服务和调度器负责账号会话及网络；
+未修改全局虚表，没有通过 Oplog field8/9 替代上传，也没有使用固定成功或参数回显。
+构建限制 AMD64、timestamp=0x6ACCBF76、SizeOfImage=0xC34F000。
+scene 构造0x49A500、原虚表0x8FDC488、BaseRequest准备0x49A810，
+IOBuffer追加/数据/长度0x6979C0/0x697A00/0x697A30，布局和生命周期单独核验。
+
+本地 JPEG/PNG 经 WIC 完整解码，读取自有快照，按30000字节分块发送。
+每块校验真实 BaseResponse 和确认偏移；最终独立 GetProfile 核对大小头像资源、账号、原昵称和签名。
+仅忽略实测出现的 HTTP/HTTPS 协议差异，其余完整 URL 必须一致。
+submitted、uploaded、verified 分别表示提交、全部字节业务确认及资料回读确认；只有三阶段均完成才成功。
+超时不自动重试，模块 pin 与共享状态保留晚到回调生命周期。头像与昵称、签名共享同一 DLL 写入互斥锁。
+
+用户授权 C:\1.jpeg：667×500 JPEG，2619字节。最终新编译生产路由诊断实测 ret=0、errCode=1、
+submitted=true、uploaded=true、verified=true，2619/2619，原昵称和签名未变。
+wire、图片解码、HTTP 非法参数、未验证阶段不报成功、写锁测试通过；GetSelfProfile.cpp 新对象编译通过。
+未要求恢复头像，完整 Hook DLL 未构建替换部署；真实多块、换号和断网超时等场景未实测。
+完整协议、ABI、失败调查、验证及复现边界见 [头像实现记录](edit-self-avatar-4.1.15.55.md)。

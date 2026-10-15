@@ -323,9 +323,7 @@ curl -X POST http://127.0.0.1:30001/SendTextMsg \
 当前版本的具体指针链及验证范围见
 [GetSelfProfile 4.1.15.13 偏移记录](docs/self-profile-offsets-4.1.15.13.md)。
 
-`EditSelfNickname` 已接入原生异步请求及服务端回读验证，仅支持已核验的
-`4.1.15.13` 构建；参数、偏移、实测结果与部署范围见
-[EditSelfNickname 实现记录](docs/edit-self-nickname-status.md)。
+`EditSelfNickname` 已适配核验的 `4.1.15.55`，通过原生异步请求及服务端回读验证；本轮真实改为 test 后已恢复原昵称。参数、偏移和验证边界见 [新版昵称实现记录](docs/edit-self-nickname-4.1.15.55.md)。
 
 `SendTextMsg_NoSrc` 使用原生异步 `newsendmsg` 请求，等待服务端业务结果并核对
 收件人和消息 ID；参数与验证范围见[无来源文本发送实现记录](docs/send-text-nosrc-4.1.15.13.md)。
@@ -341,5 +339,13 @@ curl -X POST http://127.0.0.1:30001/SendTextMsg \
 以 [个人信息九接口状态](docs/personal-info-status-4.1.15.55.md) 为当前适配范围，
 上方历史版本说明不能用于判断新版兼容性。GetSelfProfile 已复用新版原生读取并重新验证；
 getonlineinfo 读取本机原生登录位，失败时返回未知状态。
-收款码、收货地址、本人二维码、签名、头像和配置目录当前明确报未实现，
-昵称修改仍受旧版构建门槛限制。移除固定链接和缓存回显不代表已完成原生业务实现。
+收款码、收货地址和配置目录当前明确报未实现，
+昵称修改已适配 4.1.15.55 并通过真实修改及恢复验证。移除固定链接和缓存回显不代表已完成原生业务实现。
+
+本人二维码 `POST /GetQRCode` 已接入 4.1.15.55 的原生异步 CGI 168，返回真实 `QRCode_URL`，请求使用 `{}`。原生及短时生产 HTTP 验证通过，完整 DLL 尚未部署；见 [GetQRCode 实现记录](docs/self-qrcode-status-4.1.15.55.md)。
+
+`POST /EditSelfNickname` 已适配 4.1.15.55，新版 GetProfile/Oplog 服务端回读验证通过，已实测改为 test 并恢复原昵称；完整 DLL 未部署。见 [新版昵称实现记录](docs/edit-self-nickname-4.1.15.55.md)。
+
+`POST /api/mod_self_nick_signature` 已适配 4.1.15.55，参数 `newSignature`，允许空字符串清空；原生 Oplog 更新及服务端回读通过，已实测改为 test 并恢复原签名，昵称未变。完整 DLL 未部署；见 [签名实现记录](docs/edit-self-signature-4.1.15.55.md)。
+
+`POST /api/upload_head_img` 已适配 4.1.15.55，参数 `filepath`；原生 CGI157 上传并回读本人资料确认，已实测指定 C:\1.jpeg，昵称和签名未变。支持本机 JPEG/PNG（最多4MiB，宽高1～4096），仅完整验证后成功。完整 DLL 未部署；见 [头像实现记录](docs/edit-self-avatar-4.1.15.55.md)。

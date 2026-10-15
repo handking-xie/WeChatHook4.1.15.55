@@ -7,6 +7,9 @@
 #include "SelfProfileRoute.h"
 #include "OnlineInfoRoute.h"
 #include "PersonalInfoAvailability.h"
+#include "SelfQrRoute.h"
+#include "EditSelfSignatureRoute.h"
+#include "EditSelfAvatarRoute.h"
 
 #include "GetSelfProfile.h"
 
@@ -38,14 +41,11 @@ void RegisterGetSelfProfile(httplib::Server& svr)
     online_info::Register(svr);
     personal_info::Unavailable(svr, "/GetSelfAddress",
         "native delivery address request is not implemented for 4.1.15.55");
-    personal_info::Unavailable(svr, "/GetQRCode",
-        "native self QR code request is not implemented for 4.1.15.55");
+    self_qr::Register(svr);
     personal_info::Unavailable(svr, "/SetQRCode",
         "manual QR code injection is disabled; it cannot verify the current account QR code");
-    personal_info::Unavailable(svr, "/api/mod_self_nick_signature",
-        "native signature update is not implemented for 4.1.15.55");
-    personal_info::Unavailable(svr, "/api/upload_head_img",
-        "native avatar upload is not implemented for 4.1.15.55");
+    self_signature::Register(svr);
+    self_avatar::Register(svr);
     personal_info::Unavailable(svr, "/api/get_config_path",
         "native configuration directory getter is not verified for 4.1.15.55");
 }

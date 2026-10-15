@@ -1,4 +1,6 @@
-# EditSelfNickname 实现与验证
+# EditSelfNickname 实现与验证（4.1.15.13 历史记录）
+
+当前 4.1.15.55 实现及本轮真实改名/恢复结果见 [新版记录](edit-self-nickname-4.1.15.55.md)。以下保留为旧版历史证据，不代表当前生产偏移。
 
 日期：2026-10-08。仅支持当前 Windows x64 Weixin 4.1.15.13 构建（PE 时间戳 0x6AB0A378，SizeOfImage 0xC0AE000）。
 

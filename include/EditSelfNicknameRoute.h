@@ -3,9 +3,10 @@
 #include "EditSelfNickname.h"
 #include "json.hpp"
 
-inline void RegisterEditSelfNickname(httplib::Server& svr) {
+template<class Editor>
+inline void RegisterEditSelfNickname(httplib::Server& svr, Editor editor) {
     using json = nlohmann::json;
-    svr.Post("/EditSelfNickname", [](const httplib::Request& req, httplib::Response& res) {
+    svr.Post("/EditSelfNickname", [editor](const httplib::Request& req, httplib::Response& res) {
         json resp = {{"submitted", false}, {"verified", false}};
         auto fail = [&](const char* message) {
             resp["ret"] = -1;
@@ -33,7 +34,7 @@ inline void RegisterEditSelfNickname(httplib::Server& svr) {
                 static_cast<int>(nickname.size()), nullptr, 0)) {
             fail("nickname must be valid UTF-8 without NUL, at most 4096 bytes"); return;
         }
-        const auto result = self_nickname::Edit(nickname);
+        const auto result = editor(nickname);
         resp["ret"] = result.ret;
         resp["retmsg"] = result.message;
         resp["submitted"] = result.submitted;
@@ -41,4 +42,8 @@ inline void RegisterEditSelfNickname(httplib::Server& svr) {
         res.set_content(resp.dump(), "application/json");
     });
 
+}
+
+inline void RegisterEditSelfNickname(httplib::Server& svr) {
+    RegisterEditSelfNickname(svr, [](const std::string& value) { return self_nickname::Edit(value); });
 }

@@ -332,7 +332,7 @@
                 "GetQRCode"
               ]
             },
-            "description": "ShowDoc 页面: https://www.showdoc.com.cn/PCWeixinHook/11559060627323076\n\n获取本人二维码。\n\n- 接口路由：`/GetQRCode`\n- 接口类型：PB 接口\n\n本项目 4.1.15.55：原生实现尚未完成。当前路由明确返回 ret=-1、implemented=false、submitted=false、verified=false；该失败保护不算接口实现，不返回固定链接、参数回显或猜测数据。 逐项实现方式、状态和边界见 docs/native-interface-implementation-reference.md 及 docs/personal-info-status-4.1.15.55.md。"
+            "description": "ShowDoc 页面: https://www.showdoc.com.cn/PCWeixinHook/11559060627323076\n\n获取本人二维码，POST /GetQRCode。\n\n本项目 4.1.15.55：原生 CGI 168 /cgi-bin/micromsg-bin/getqrcode，使用当前账号，读取操作不重置二维码。请求为空或 {}，拒绝目标账号、人工 URL、opcode 和其它参数（含 ret_ori_json/ret_ori_pb）。成功 ret=0、retmsg=success、submitted=true、verified=true，返回 QRCode_URL 和兼容 qr_url；失败 ret=-1，不返回 URL。最多等待原生完成 30 秒；超时 submitted=true 表示结果未知，不自动重试。verified 表示原生传输及服务端业务成功、URL 格式和请求前后账号核对通过，未做扫码解码或界面比对。新版 native codec、真实原生查询及微信进程内短时生产 HTTP 路由验证通过，完整 Hook DLL 未构建部署。实现方式及限制见 docs/self-qrcode-status-4.1.15.55.md。"
           }
         },
         {
@@ -358,7 +358,7 @@
                 "EditSelfNickname"
               ]
             },
-            "description": "ShowDoc 页面: https://www.showdoc.com.cn/PCWeixinHook/11559060627323015\n\n修改本人昵称。\n\n- 接口路由：`/EditSelfNickname`\n- 接口类型：PB 接口\n\n本项目现有原生实现仅核验 4.1.15.13；4.1.15.55 尚未适配，构建门槛拒绝调用。不能将旧版成功记录视为新版支持。 逐项实现方式、状态和边界见 docs/native-interface-implementation-reference.md 及 docs/personal-info-status-4.1.15.55.md。"
+            "description": "ShowDoc 页面: https://www.showdoc.com.cn/PCWeixinHook/11559060627323015\n\n修改本人昵称，POST /EditSelfNickname，参数 nickname（兼容 nick_name，nickname 优先）。非空 UTF-8、无 NUL、最多 4096 字节。\n\n本项目已适配核验的 4.1.15.55 构建：原生 GetProfile 读取本人完整资料，仅替换昵称后经 Oplog CmdId=1 提交，检查业务结果并再次 GetProfile 回读确认。返回 ret/retmsg/submitted/verified；同昵称不重复提交，ret=0、submitted=false、verified=true。超时不自动重试，提交成功不等于业务完成。新版 codec、协议/生产 HTTP 测试通过，已按用户授权真实改为 test 并恢复原昵称，两次服务端验证均成功。完整 Hook DLL 未构建部署；详见 docs/edit-self-nickname-4.1.15.55.md。"
           }
         },
         {
@@ -385,7 +385,7 @@
                 "mod_self_nick_signature"
               ]
             },
-            "description": "\n### 请求参数说明\n| 参数名 | 类型 | 必填 | 说明 |\n| :--- | :--- | :--- | :--- |\n| `newSignature` | `string` | 是 |  |\n\n> 来源：WeChat 4.1.8.27 Hook 完整版 | 服务端口：30001 | 完整路径：`http://127.0.0.1:30001/api/mod_self_nick_signature`\n\n本项目 4.1.15.55：原生实现尚未完成。当前路由明确返回 ret=-1、implemented=false、submitted=false、verified=false；该失败保护不算接口实现，不返回固定链接、参数回显或猜测数据。 逐项实现方式、状态和边界见 docs/native-interface-implementation-reference.md 及 docs/personal-info-status-4.1.15.55.md。"
+            "description": "修改个人签名，POST /api/mod_self_nick_signature，必填字符串 newSignature；空字符串清空。要求有效 UTF-8、无 NUL、最多 4096 字节。\n\n本项目已适配核验的 4.1.15.55 构建：GetProfile 核对本人账号，仅更新 ModUserInfo field 13，经 Oplog CmdId=1 提交后从服务端回读，并核对昵称保持一致。成功 ret=0、verified=true、errCode=1；失败 ret=-1、verified=false、errCode=-1，另含 retmsg/errMsg/submitted。同签名不提交；超时不自动重试。昵称和签名更新共用本 DLL 写入锁。\n\n协议、生产 HTTP、原生 codec、共享锁测试通过，已按用户授权真实改为 test 并恢复原空签名，服务端确认恢复且昵称未变。完整 Hook DLL 未构建部署。实现方式及边界见 docs/edit-self-signature-4.1.15.55.md。"
           },
           "response": [
             {
@@ -439,7 +439,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"filepath\": \"D:\\\\2.png\"\n}"
+              "raw": "{\n  \"filepath\": \"C:\\\\1.jpeg\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/upload_head_img",
@@ -451,7 +451,7 @@
                 "upload_head_img"
               ]
             },
-            "description": "\n### 请求参数说明\n| 参数名 | 类型 | 必填 | 说明 |\n| :--- | :--- | :--- | :--- |\n| `filepath` | `string` | 是 |  |\n\n> 来源：WeChat 4.1.8.27 Hook 完整版 | 服务端口：30001 | 完整路径：`http://127.0.0.1:30001/api/upload_head_img`\n\n本项目 4.1.15.55：原生实现尚未完成。当前路由明确返回 ret=-1、implemented=false、submitted=false、verified=false；该失败保护不算接口实现，不返回固定链接、参数回显或猜测数据。 逐项实现方式、状态和边界见 docs/native-interface-implementation-reference.md 及 docs/personal-info-status-4.1.15.55.md。"
+            "description": "POST /api/upload_head_img，JSON 参数 filepath 为 UTF-8 本机盘符绝对路径。支持可完整解码的 JPEG/PNG，1～4194304字节，宽高1～4096。原生 CGI157 分块上传后独立 GetProfile 确认本人大小头像资源、账号及原昵称/签名。仅允许 HTTP/HTTPS 协议差异，其余完整 URL 比较。\n\nret=0、errCode=1 仅在 verified=true 时成功。submitted=请求已提交，uploaded=全部字节获服务器业务确认，verified=服务端本人资料回读确认。失败保留阶段标志，uploaded=true/verified=false 时不要自动重试。\n\n4.1.15.55 当前构建已实测用户指定 C:\\1.jpeg，2619/2619，三阶段均通过；完整 Hook DLL 未构建替换部署。详见 docs/edit-self-avatar-4.1.15.55.md 和 docs/native-interface-implementation-reference.md。"
           },
           "response": [
             {
@@ -466,7 +466,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"filepath\": \"D:\\\\2.png\"\n}"
+                  "raw": "{\n  \"filepath\": \"C:\\\\1.jpeg\"\n}"
                 },
                 "url": {
                   "raw": "{{base_url}}/api/upload_head_img",
@@ -489,7 +489,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"errCode\": 1,\n  \"errMsg\": \"success\"\n}"
+              "body": "{\n  \"ret\": 0,\n  \"errCode\": 1,\n  \"retmsg\": \"avatar uploaded and verified from server profile\",\n  \"errMsg\": \"avatar uploaded and verified from server profile\",\n  \"submitted\": true,\n  \"uploaded\": true,\n  \"verified\": true,\n  \"total_bytes\": 2619,\n  \"acknowledged_bytes\": 2619\n}"
             }
           ]
         },
