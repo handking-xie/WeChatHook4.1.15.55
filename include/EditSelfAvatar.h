@@ -5,6 +5,9 @@
 #include "EditSelfNickname.h"
 #include "SignatureWire.h"
 #include "SelfProfileMutation.h"
+#ifdef small
+#undef small
+#endif
 namespace self_avatar {
 struct Result {int ret=-1;bool submitted=false,uploaded=false,verified=false;size_t total=0,acknowledged=0;std::string message;};
 // Compare the full resource, allowing only the observed HTTP/HTTPS scheme upgrade.
@@ -12,14 +15,14 @@ inline bool SameUrl(std::string_view a,std::string_view b){
  if(!avatar_wire::Url(a)||!avatar_wire::Url(b))return false;
  auto resource=[](std::string_view s){return s.substr(s.find("://")+3);};return resource(a)==resource(b);
 }
-inline bool Profile(self_nickname::Native& native,std::string_view wxid,std::string& info,std::string& nickname,std::string& big,std::string& small,std::string& error){
+inline bool Profile(self_nickname::Native& native,std::string_view wxid,std::string& info,std::string& nickname,std::string& big,std::string& smallUrl,std::string& error){
  std::string response;protobuf_wire::Field ext{},b{},s{};
  if(!native.Cgi(0x1009600,32,0x49A1C0,protobuf_wire::Bytes(2,wxid),response,error,nullptr,wxid)||
     !nickname_wire::UserInfo(response,wxid,info,nickname)||!protobuf_wire::Unique(response,3,2,ext)||
     !protobuf_wire::Unique(ext.bytes,9,2,b)||!protobuf_wire::Unique(ext.bytes,10,2,s)){
   if(error.empty())error="cannot read verified server avatar profile";return false;
  }
- big.assign(b.bytes);small.assign(s.bytes);return true;
+ big.assign(b.bytes);smallUrl.assign(s.bytes);return true;
 }
 inline Result Upload(const std::string& path){
  Result result;
@@ -44,13 +47,13 @@ inline Result Upload(const std::string& path){
    offset=progress.next;result.acknowledged=offset;
   }
   result.uploaded=true;
-  if(!avatar_wire::Url(progress.big)||!avatar_wire::Url(progress.small)){result.message="upload completed; final avatar URLs missing or invalid";return result;}
+  if(!avatar_wire::Url(progress.big)||!avatar_wire::Url(progress.smallUrl)){result.message="upload completed; final avatar URLs missing or invalid";return result;}
   for(int attempt=0;attempt<5;++attempt){
    if(attempt)Sleep(1000);
-   std::string info,name,big,small,actualSignature;
-   if(!Profile(native,account.wxid,info,name,big,small,error)||!signature_wire::Value(info,actualSignature))continue;
+   std::string info,name,big,smallUrl,actualSignature;
+   if(!Profile(native,account.wxid,info,name,big,smallUrl,error)||!signature_wire::Value(info,actualSignature))continue;
    if(name!=nickname||actualSignature!=signature){result.message="upload completed; preserved nickname or signature changed";return result;}
-   if(!SameUrl(big,progress.big)||!SameUrl(small,progress.small))continue;
+   if(!SameUrl(big,progress.big)||!SameUrl(smallUrl,progress.smallUrl))continue;
    if(!self_profile_memory::Read(GetCurrentProcess(),base,current,error)||current.wxid!=account.wxid){result.message="upload completed; account changed during verification";return result;}
    result.ret=0;result.verified=true;result.message="avatar uploaded and verified from server profile";return result;
   }
