@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -176,6 +176,8 @@
     <ClInclude Include="include\ForwardXMLMsg.h" />
     <ClInclude Include="include\GetSelfProfile.h" />
     <ClInclude Include="include\ProfileMemory.h" />
+    <ClInclude Include="include\SelfProfileMemory.h" />
+    <ClInclude Include="include\SelfProfileRoute.h" />
     <ClInclude Include="include\EditSelfNickname.h" />
     <ClInclude Include="include\EditSelfNicknameRoute.h" />
     <ClInclude Include="include\NicknameWire.h" />

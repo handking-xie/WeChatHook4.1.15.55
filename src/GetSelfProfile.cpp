@@ -1,11 +1,11 @@
-#include "httplib.h"
+﻿#include "httplib.h"
 #include "json.hpp"
 #include <windows.h>
 #include <string>
 #include <fstream>
 #include "global.h"
 #include "tools.h"
-#include "ProfileMemory.h"
+#include "SelfProfileRoute.h"
 
 #include "GetSelfProfile.h"
 
@@ -15,9 +15,9 @@ using json = nlohmann::json;
 static bool ReadSelfProfile(SelfInfo_t& outInfo, std::string& error)
 {
     outInfo = {};
-    profile_memory::Profile profile;
+    self_profile_memory::Profile profile;
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(L"Weixin.dll"));
-    if (!profile_memory::Read(GetCurrentProcess(), base, profile, error)) return false;
+    if (!self_profile_memory::Read(GetCurrentProcess(), base, profile, error)) return false;
     outInfo.wxid = std::move(profile.wxid);
     outInfo.alias = std::move(profile.alias);
     outInfo.nickname = std::move(profile.nickname);
@@ -170,32 +170,7 @@ static std::string ScanMemoryForQRCode()
 
 void RegisterGetSelfProfile(httplib::Server& svr)
 {
-    svr.Post("/GetSelfProfile", [](const httplib::Request&, httplib::Response& res)
-        {
-            SelfInfo_t profile{};
-            std::string error;
-            if (!ReadSelfProfile(profile, error)) {
-                json failure = {{"ret", -1}, {"retmsg", error}};
-                res.set_content(failure.dump(), "application/json");
-                return;
-            }
-
-            json resp;
-            resp["ret"] = 0;
-            resp["retmsg"] = "success";
-            resp["unavailable_fields"] = {"email", "qq", "proiv", "area", "signinfo"};
-            resp["wxid"] = profile.wxid;
-            resp["alias"] = profile.alias;
-            resp["nickname"] = profile.nickname;
-            resp["email"] = profile.email;
-            resp["qq"] = profile.qq;
-            resp["phone"] = profile.phone;
-            resp["proiv"] = profile.proiv;
-            resp["area"] = profile.area;
-            resp["signinfo"] = profile.signinfo;
-            
-            res.set_content(resp.dump(), "application/json");
-        });
+    self_profile_memory::Register(svr);
 
     svr.Post("/GetSelfAddress", [](const httplib::Request&, httplib::Response& res)
         {
@@ -313,4 +288,3 @@ void RegisterGetSelfProfile(httplib::Server& svr)
             res.set_content(resp.dump(), "application/json");
         });
 }
-

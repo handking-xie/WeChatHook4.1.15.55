@@ -648,10 +648,80 @@ HTTP 返回 `ret`、`retmsg`、`submitted`、`verified`；进入业务解码后�
 
 ## IsLoginStatus（2026-10-15，4.1.15.55）
 
-登录状态已从数据库句柄/全局缓存判断改为独立原生读取：
-`include/LoginStatusMemory.h`、`include/LoginStatusRoute.h`。
-新版全局入口、账号虚表及登录 getter 已重新定位，详见
-[IsLoginStatus 实现与验证](is-login-status-4.1.15.55.md)。
-未登录与读取失败分别返回 `ret=0,status=0,is_login=false` 和
-`ret=-1,status=-1,is_login=null`，仅已登录时返回本次读取的账号资料。
-本次适配不修改旧版 ProfileMemory 的构建门槛，不代表其它接口支持 4.1.15.55。
+`POST /IsLoginStatus` 无参数，已从数据库句柄与全局缓存判断改为独立原生读取。
+原实现以 `contact.db` 句柄是否存在作为登录依据，并返回 `SelfInfo` 缓存，
+不能保证退出、初始化或账号切换时的状态和资料属于当前账号。
+
+### 代码结构与复用范围
+
+- `include/LoginStatusMemory.h`：独立校验新版构建、账号对象和登录位，安全读取账号资料。
+- `include/LoginStatusRoute.h`：`Handle` 转换响应，`Register` 注册 HTTP POST。
+- `src/ContactsMgr.cpp`：在 `Route_ContactsMgr` 中调用 `login_status::Register`。
+- `tools/login_status_test.cpp`：直接复用生产 `Read`、`Handle`、`Register`，执行模拟读取和本机 HTTP 测试。
+- [IsLoginStatus 详细定位与验证记录](is-login-status-4.1.15.55.md)：完整指令依据及诊断运行方法。
+
+仅复用 `ProfileMemory` 的 `ReadValue`、`ReadString` 等安全读取工具，不调用其旧版
+`Read`，不修改其它接口的构建门槛。本次只核验 `IsLoginStatus`，不能据此宣称
+`GetSelfProfile`、原生 CGI 或其它接口已适配 4.1.15.55。
+
+### 新版构建与原生定位
+
+已核验实际加载的 Windows x64 `Weixin.dll` 4.1.15.55：
+PE 时间戳 `0x6ACCBF76`，SizeOfImage `0xC34F000`。
+以下均为该构建的模块相对地址或对象内偏移，不能沿用旧版数值。
+
+| 项目 | 新版位置 | 定位依据 |
+|---|---|---|
+| manager 全局入口 | RVA `0xBB92FC0` | 原生 getter `0x45D10` 从该全局取值 |
+| account 成员 | manager `+0x68` | manager 虚表 `+0x60` 的 getter `0x469A0` 返回该 shared_ptr；`+0x70` 为控制块 |
+| account 虚表 | RVA `0x8FD1498` | 构造函数 `0x37B880` 在 `0x37B8B5` 加载并写入 |
+| 登录标志 | account `+0x38` 的 bit 0 | 虚表首项 `0x389A50` 执行 `movzx eax,byte ptr[rcx+0x38]; and al,1; ret` |
+| wxid / alias | account `+0x48` / `+0x68` | 虚表 getter `0x3855C0` / `0x3855D0` 返回对应字段地址 |
+| nickname | account `+0x88` | 账号对象中相邻 MSVC 字符串及既有布局核对；未做独立界面核对 |
+
+调查时通过模块 `.data` 中的候选指针、账号虚表、原生 getter 和构造函数交叉核对。
+生产路径只沿固定指针链读取，不扫描内存、不查询数据库、不读取账号目录、不访问 `SelfInfo`。
+
+### 读取流程与一致性检查
+
+```text
+清空输出
+  → 检查 PE 签名、AMD64 架构、时间戳和映像大小
+  → 读取 manager → account，校验账号虚表
+  → 读取 account+0x38 的 bit 0
+  → 已登录时读取 wxid、alias、nickname；未登录时不读取残留资料
+  → 再次核对 manager、account、虚表、登录位；已登录时复读并比较三个字段
+  → 全部通过后发布本次结果；任一步失败返回具体错误
+```
+
+资料读取检查 MSVC 字符串的长度、容量、内联/堆存储、UTF-8 和 NUL，
+采用 `ReadProcessMemory` 并核对实际读取字节数，失败不发布半份资料或上次账号数据。
+空 manager/account、虚表不匹配或不可读仅证明状态不可用，不能直接解释成未登录。
+双次读取是尽力而为的一致性检查，不持有微信内部锁，无法排除 ABA 切换和完整生命周期竞争。
+
+### 返回语义
+
+| 读取结果 | 返回字段 | 账号资料 |
+|---|---|---|
+| 确认已登录 | `ret=0, retmsg=success, status=1, is_login=true` | 本次原生读取的 `wxid`、`alias`、`nickname` |
+| 确认未登录 | `ret=0, retmsg=success, status=0, is_login=false` | 不返回 |
+| 构建不支持、对象不可用、字段无效或快照变化 | `ret=-1, status=-1, is_login=null`，`retmsg` 说明原因 | 不返回 |
+
+调用方必须先检查 `ret`；`is_login=null` 表示未知，不能转成已确认未登录。
+保留原有 `status`、`is_login` 字段，新增明确的读取失败语义；Apifox 对应接口说明已同步。
+当前实现和本次验证均为 HTTP POST，未新增或验证 WebSocket 分发。
+
+### 验证结果与交付边界
+
+- Zig 0.16.0 Windows x64 测试程序及 `ContactsMgr.cpp` 对象编译通过，仅有既有第三方字面量运算符警告。
+- 模拟映像覆盖登录、退出、其它标志位、错误构建/虚表、非法 UTF-8、超长或不可读字符串、
+  空 wxid、空/不可读 manager、空 account 和失败输出清空；真实本机 HTTP 验证登录、退出及未知状态响应通过。
+- 重新枚举实际微信 PID 和模块基址后，生产读取及复用生产注册函数的短时本机 HTTP POST
+  验证通过，`logged_in=1`。诊断只读目标进程，不注入 DLL、不修改微信内存、不提交微信网络业务请求。
+- Apifox JSON、项目 XML 解析和差异检查通过。
+- 完整项目 `core.dll` 尚未重建和替换部署；诊断 HTTP 验证不等同于完整 Hook DLL 部署后的端到端验证。
+- 真实退出/重新登录、账号切换、其它构建及高并发生命周期变化尚未实测。
+
+## 2026-10-15：GetSelfProfile 4.1.15.55
+
+新版个人信息实现见 [GetSelfProfile 4.1.15.55](self-profile-4.1.15.55.md)，代码为 include/SelfProfileMemory.h、include/SelfProfileRoute.h；旧版 ProfileMemory::Read 保持原构建门槛。各字段证据与验证限制以新版记录为准。

@@ -228,7 +228,7 @@
                 "GetSelfProfile"
               ]
             },
-            "description": "ShowDoc 页面: https://www.showdoc.com.cn/PCWeixinHook/11559060626866431\n\n调用 获取个人信息 功能。\n\n- 接口路由：`/GetSelfProfile`\n- 接口类型：当前 HTTP 接口"
+            "description": "ShowDoc 页面: https://www.showdoc.com.cn/PCWeixinHook/11559060626866431\n\n调用 获取个人信息 功能。\n\n- 接口路由：`/GetSelfProfile`\n- 接口类型：当前 HTTP 接口\n\n本项目 4.1.15.55：原生账号内存读取 wxid、alias、nickname、phone；phone 尚待账号设置独立核对。email、qq、proiv、area、signinfo 未定位，以 unavailable_fields 明示。失败 ret=-1 且不返回资料。验证范围见 docs/self-profile-4.1.15.55.md。"
           }
         },
         {
