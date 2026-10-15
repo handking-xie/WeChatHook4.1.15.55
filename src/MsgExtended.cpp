@@ -12,6 +12,7 @@
 #include "wx_send_xml.h"
 #include "db_mgr.h"
 #include "EditSelfNicknameRoute.h"
+#include "PersonalInfoAvailability.h"
 
 using json = nlohmann::json;
 
@@ -81,18 +82,8 @@ void Route_MsgExtended(httplib::Server& svr)
     RegisterEditSelfNickname(svr);
 
     // 3. 面对面收款二维码
-    svr.Post("/Busif2fgetqrcodev2", [](const httplib::Request& req, httplib::Response& res) {
-        json reqJson;
-        json resp;
-        try { if (!req.body.empty()) reqJson = json::parse(req.body); } catch (...) {}
-
-        resp["ret"] = 0;
-        resp["retmsg"] = "success";
-        resp["qrcode"] = "https://payapp.weixin.qq.com/facepay/qrcode";
-        resp["url"] = "https://payapp.weixin.qq.com/facepay/qrcode";
-        res.set_content(resp.dump(), "application/json");
-    });
-
+    personal_info::Unavailable(svr, "/Busif2fgetqrcodev2",
+        "native collection QR code request is not implemented for 4.1.15.55");
     // 4. 下载语音数据
     svr.Post("/DownloadVoice", [](const httplib::Request& req, httplib::Response& res) {
         json reqJson;

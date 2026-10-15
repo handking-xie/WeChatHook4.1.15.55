@@ -254,7 +254,7 @@
                 "getonlineinfo"
               ]
             },
-            "description": "ShowDoc 页面: https://www.showdoc.com.cn/PCWeixinHook/11559060627326236\n\n通过微信 PB 协议获取当前账号的在线设备状态。\n\n- 接口路由：`/getonlineinfo`\n- 接口类型：PB 接口"
+            "description": "ShowDoc 页面: https://www.showdoc.com.cn/PCWeixinHook/11559060627326236\n\n通过微信 PB 协议获取当前账号的在线设备状态。\n\n- 接口路由：`/getonlineinfo`\n- 接口类型：PB 接口\n\n本项目 4.1.15.55：读取本机原生账号登录位。ret=0 时 online_status=1/0、is_online=true/false；读取失败 ret=-1、online_status=-1、is_online=null。scope=local_client_login，不表示服务端多设备在线列表。模拟及当前进程只读临时 HTTP 验证通过，完整 DLL 未部署。 逐项实现方式、状态和边界见 docs/native-interface-implementation-reference.md 及 docs/personal-info-status-4.1.15.55.md。"
           }
         },
         {
@@ -280,7 +280,7 @@
                 "Busif2fgetqrcodev2"
               ]
             },
-            "description": "ShowDoc 页面: https://www.showdoc.com.cn/PCWeixinHook/11559060627323000\n\n获取面对面收款二维码。\n\n- 接口路由：`/Busif2fgetqrcodev2`\n- 接口类型：PB 接口"
+            "description": "ShowDoc 页面: https://www.showdoc.com.cn/PCWeixinHook/11559060627323000\n\n获取面对面收款二维码。\n\n- 接口路由：`/Busif2fgetqrcodev2`\n- 接口类型：PB 接口\n\n本项目 4.1.15.55：原生实现尚未完成。当前路由明确返回 ret=-1、implemented=false、submitted=false、verified=false；该失败保护不算接口实现，不返回固定链接、参数回显或猜测数据。 逐项实现方式、状态和边界见 docs/native-interface-implementation-reference.md 及 docs/personal-info-status-4.1.15.55.md。"
           }
         },
         {
@@ -306,7 +306,7 @@
                 "GetSelfAddress"
               ]
             },
-            "description": "ShowDoc 页面: https://www.showdoc.com.cn/PCWeixinHook/11559060627323077\n\n获取本人收货地址信息。\n\n- 接口路由：`/GetSelfAddress`\n- 接口类型：PB 接口"
+            "description": "ShowDoc 页面: https://www.showdoc.com.cn/PCWeixinHook/11559060627323077\n\n获取本人收货地址信息。\n\n- 接口路由：`/GetSelfAddress`\n- 接口类型：PB 接口\n\n本项目 4.1.15.55：原生实现尚未完成。当前路由明确返回 ret=-1、implemented=false、submitted=false、verified=false；该失败保护不算接口实现，不返回固定链接、参数回显或猜测数据。 逐项实现方式、状态和边界见 docs/native-interface-implementation-reference.md 及 docs/personal-info-status-4.1.15.55.md。"
           }
         },
         {
@@ -332,7 +332,7 @@
                 "GetQRCode"
               ]
             },
-            "description": "ShowDoc 页面: https://www.showdoc.com.cn/PCWeixinHook/11559060627323076\n\n获取本人二维码。\n\n- 接口路由：`/GetQRCode`\n- 接口类型：PB 接口"
+            "description": "ShowDoc 页面: https://www.showdoc.com.cn/PCWeixinHook/11559060627323076\n\n获取本人二维码。\n\n- 接口路由：`/GetQRCode`\n- 接口类型：PB 接口\n\n本项目 4.1.15.55：原生实现尚未完成。当前路由明确返回 ret=-1、implemented=false、submitted=false、verified=false；该失败保护不算接口实现，不返回固定链接、参数回显或猜测数据。 逐项实现方式、状态和边界见 docs/native-interface-implementation-reference.md 及 docs/personal-info-status-4.1.15.55.md。"
           }
         },
         {
@@ -358,7 +358,7 @@
                 "EditSelfNickname"
               ]
             },
-            "description": "ShowDoc 页面: https://www.showdoc.com.cn/PCWeixinHook/11559060627323015\n\n修改本人昵称。\n\n- 接口路由：`/EditSelfNickname`\n- 接口类型：PB 接口"
+            "description": "ShowDoc 页面: https://www.showdoc.com.cn/PCWeixinHook/11559060627323015\n\n修改本人昵称。\n\n- 接口路由：`/EditSelfNickname`\n- 接口类型：PB 接口\n\n本项目现有原生实现仅核验 4.1.15.13；4.1.15.55 尚未适配，构建门槛拒绝调用。不能将旧版成功记录视为新版支持。 逐项实现方式、状态和边界见 docs/native-interface-implementation-reference.md 及 docs/personal-info-status-4.1.15.55.md。"
           }
         },
         {
@@ -385,7 +385,7 @@
                 "mod_self_nick_signature"
               ]
             },
-            "description": "\n### 请求参数说明\n| 参数名 | 类型 | 必填 | 说明 |\n| :--- | :--- | :--- | :--- |\n| `newSignature` | `string` | 是 |  |\n\n> 来源：WeChat 4.1.8.27 Hook 完整版 | 服务端口：30001 | 完整路径：`http://127.0.0.1:30001/api/mod_self_nick_signature`"
+            "description": "\n### 请求参数说明\n| 参数名 | 类型 | 必填 | 说明 |\n| :--- | :--- | :--- | :--- |\n| `newSignature` | `string` | 是 |  |\n\n> 来源：WeChat 4.1.8.27 Hook 完整版 | 服务端口：30001 | 完整路径：`http://127.0.0.1:30001/api/mod_self_nick_signature`\n\n本项目 4.1.15.55：原生实现尚未完成。当前路由明确返回 ret=-1、implemented=false、submitted=false、verified=false；该失败保护不算接口实现，不返回固定链接、参数回显或猜测数据。 逐项实现方式、状态和边界见 docs/native-interface-implementation-reference.md 及 docs/personal-info-status-4.1.15.55.md。"
           },
           "response": [
             {
@@ -451,7 +451,7 @@
                 "upload_head_img"
               ]
             },
-            "description": "\n### 请求参数说明\n| 参数名 | 类型 | 必填 | 说明 |\n| :--- | :--- | :--- | :--- |\n| `filepath` | `string` | 是 |  |\n\n> 来源：WeChat 4.1.8.27 Hook 完整版 | 服务端口：30001 | 完整路径：`http://127.0.0.1:30001/api/upload_head_img`"
+            "description": "\n### 请求参数说明\n| 参数名 | 类型 | 必填 | 说明 |\n| :--- | :--- | :--- | :--- |\n| `filepath` | `string` | 是 |  |\n\n> 来源：WeChat 4.1.8.27 Hook 完整版 | 服务端口：30001 | 完整路径：`http://127.0.0.1:30001/api/upload_head_img`\n\n本项目 4.1.15.55：原生实现尚未完成。当前路由明确返回 ret=-1、implemented=false、submitted=false、verified=false；该失败保护不算接口实现，不返回固定链接、参数回显或猜测数据。 逐项实现方式、状态和边界见 docs/native-interface-implementation-reference.md 及 docs/personal-info-status-4.1.15.55.md。"
           },
           "response": [
             {
@@ -517,7 +517,7 @@
                 "get_config_path"
               ]
             },
-            "description": "\n> 来源：WeChat 4.1.8.27 Hook 完整版 | 服务端口：30001 | 完整路径：`http://127.0.0.1:30001/api/get_config_path`"
+            "description": "\n> 来源：WeChat 4.1.8.27 Hook 完整版 | 服务端口：30001 | 完整路径：`http://127.0.0.1:30001/api/get_config_path`\n\n本项目 4.1.15.55：原生实现尚未完成。当前路由明确返回 ret=-1、implemented=false、submitted=false、verified=false；该失败保护不算接口实现，不返回固定链接、参数回显或猜测数据。 逐项实现方式、状态和边界见 docs/native-interface-implementation-reference.md 及 docs/personal-info-status-4.1.15.55.md。"
           },
           "response": [
             {

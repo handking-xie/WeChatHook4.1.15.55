@@ -722,6 +722,151 @@ PE 时间戳 `0x6ACCBF76`，SizeOfImage `0xC34F000`。
 - 完整项目 `core.dll` 尚未重建和替换部署；诊断 HTTP 验证不等同于完整 Hook DLL 部署后的端到端验证。
 - 真实退出/重新登录、账号切换、其它构建及高并发生命周期变化尚未实测。
 
-## 2026-10-15：GetSelfProfile 4.1.15.55
+## GetSelfProfile（2026-10-15，4.1.15.55）：实现规则与方式
 
-新版个人信息实现见 [GetSelfProfile 4.1.15.55](self-profile-4.1.15.55.md)，代码为 include/SelfProfileMemory.h、include/SelfProfileRoute.h；旧版 ProfileMemory::Read 保持原构建门槛。各字段证据与验证限制以新版记录为准。
+对应接口集合为本项目 `PCWeixinHook_ShowDoc_All_Apifox_Merged.apifox.json` 中的
+“个人信息 / 获取个人信息”：`POST /GetSelfProfile`，无参数，请求体可为 `{}`。
+详细证据与限制见 [GetSelfProfile 4.1.15.55](self-profile-4.1.15.55.md)。
+
+### 实现规则
+
+1. **先核对接口合约，再适配实际构建。** 从接口集合确认路由、方法和参数；
+   从实际加载模块确认版本、AMD64、PE 时间戳和映像大小。目录名、旧版 README、
+   旧 DLL 返回结果均不能证明当前代码适配成功。
+2. **隔离版本专属读取入口。** 新版使用 `include/SelfProfileMemory.h` 中的
+   `self_profile_memory::Read`；旧版 `profile_memory::Read` 继续保留原构建门槛。
+   只复用 `ReadValue`、`ReadString` 等安全工具，不扩大旧版原生 CGI 或其它操作接口的支持范围。
+   共用指针链也不意味着其它字段、函数入口、ABI 已完成核验。
+3. **分别证明对象身份与字段语义。** 用指针链、虚表、原生 getter 和构造函数核对账号对象；
+   对每个字段单独记录依据。相邻位置、字符串长度及旧版布局只能提供线索，不能单独证明语义。
+   本次 phone 为 account+0xA8 的 11 字节字符串候选，尚未与账号设置独立核对；
+   nickname 也未完成独立界面核对，不得将这些限制改写为全部字段已验证。
+4. **成功只发布本次完整读取结果。** 入口清空输出，检查构建、账号虚表和登录位；
+   校验字符串元数据、实际读取字节数、UTF-8 及 NUL；复核账号链、虚表、登录位与全部字段后
+   才发布结果。失败返回具体原因，不返回半份资料或上次账号缓存。
+5. **明确未实现字段。** email、qq、proiv、area、signinfo 尚未定位，兼容占位分别为
+   空字符串或 0，并通过 `unavailable_fields` 标明；占位不能解释为真实账号值。
+   不能为了填满响应而回显参数、查询无关缓存或猜测字段。
+6. **按验证层次记录结论。** 区分静态定位、模拟测试、对象编译、完整 DLL 构建、部署和
+   运行实测。临时诊断 HTTP 服务复用生产路由，仍不能代替完整 Hook DLL 部署后的验证。
+   使用普通本机分析工具时如实注明工具来源，不将其结果称为 REA Evidence。
+
+### 代码组织与读取方式
+
+| 文件 | 职责 |
+|---|---|
+| [SelfProfileMemory.h](../include/SelfProfileMemory.h) | 新版构建校验、原生账号读取、字符串验证及前后快照比较 |
+| [SelfProfileRoute.h](../include/SelfProfileRoute.h) | `Handle` 生成响应，`Register` 注册 POST；允许注入读取函数供测试使用 |
+| [GetSelfProfile.cpp](../src/GetSelfProfile.cpp) | 调用注册函数；`GetSelfProfile` 将同一原生读取结果转为 `SelfInfo_t` |
+| [self_profile_test.cpp](../tools/self_profile_test.cpp) | 直接复用生产 `Read` 和 `Register`，运行模拟及只读实时 HTTP 检查 |
+
+```text
+POST /GetSelfProfile
+  → self_profile_memory::Register → Handle
+  → Read：清空输出并校验实际模块构建
+  → manager = *(module + 0xBB92FC0)
+  → account = *(manager + 0x68)
+  → 校验虚表 module + 0x8FD1498，确认 account+0x38 的 bit 0
+  → 安全读取 wxid(+0x48)、alias(+0x68)、nickname(+0x88)、phone 候选(+0xA8)
+  → 再次校验 manager/account/虚表/登录位及四个字段
+  → 全部一致后发布数据，由 HTTP 层序列化
+```
+
+上述数值只适用于本次核验的 AMD64 构建：时间戳 `0x6ACCBF76`、
+SizeOfImage `0xC34F000`。生产读取不扫描内存、不查询数据库、不读取账号目录或全局 `SelfInfo`。
+双次读取不持有微信内部锁，无法排除 ABA 变化与完整对象生命周期竞争。
+
+成功返回 `ret=0, retmsg=success` 和资料及 `unavailable_fields`；
+未登录、构建不匹配、对象不可用、字段无效或快照变化返回 `ret=-1` 与具体 `retmsg`，
+不返回账号字段。与登录状态接口不同，个人资料接口在确认未登录时不能返回资料读取成功。
+本次仅注册 HTTP POST，未新增或验证 WebSocket 分发。
+
+### 可复用的验证步骤与本次边界
+
+1. 模拟映像调用生产读取函数：覆盖内联/堆字符串、中文 UTF-8、未登录、错误构建/虚表、
+   非法或超长字符串、不可读内存、空 wxid/账号及失败输出清空。
+2. 临时本机 HTTP 服务调用生产注册函数：验证成功响应与未登录、错误构建的失败响应，
+   确认失败不泄露残留资料。
+3. 重新枚举微信 PID、实际模块路径和基址，以只读进程权限运行同一生产读取及 HTTP 路由；
+   日志仅记录字段长度，避免保存个人值。不能复用历史 PID、基址或旧测试程序的结果。
+4. 编译测试程序及修改的生产翻译单元，检查接口集合 JSON 与差异；
+   若要宣称部署可用，还必须另行完成完整 DLL 构建、加载确认和部署后接口验证。
+
+本次 Windows x64 Zig 0.16.0 测试程序、模拟读取、临时 HTTP 成功/失败测试及
+当前微信进程的生产读取/临时 HTTP 检查通过；四字段字节长度为 19/14/6/11。
+`GetSelfProfile.cpp` 使用 `-fms-extensions` 编译为对象通过（既有二维码代码使用 SEH），
+仅有既有第三方字面量运算符警告；Apifox JSON 解析与差异检查通过。
+完整 Hook DLL 尚未构建和替换部署；真实退出重登、账号切换、高并发竞争及其它构建未实测。
+
+## 个人信息九接口逐项适配（2026-10-15，当前项目）
+
+接口清单以 PCWeixinHook_ShowDoc_All_Apifox_Merged.apifox.json 的“个人信息”为准。
+本轮按顺序核验；旧版结果不能代替 4.1.15.55 验证。
+
+### 1. GetSelfProfile
+
+复用 SelfProfileMemory.h / SelfProfileRoute.h 的现有新版原生读取。
+本轮重新编译 tools/self_profile_test.cpp 到 .review/self_profile_batch_test.exe，
+模拟读取及临时生产 HTTP 路由通过；重新枚举微信进程和 Weixin.dll 后，
+只读原生读取与临时 HTTP 检查通过，四字段字节长度为 19/14/6/11。
+完整 DLL 尚未构建部署；phone 语义仍待设置界面独立核对，五个 unavailable_fields 未定位。
+原理及边界见 self-profile-4.1.15.55.md，不将已有实现改写为九接口全部完成。
+
+### 2. getonlineinfo
+
+新增 include/OnlineInfoRoute.h，由 src/GetSelfProfile.cpp 注册。
+复用独立核验的 login_status::Read，直接读取新版账号登录位并检查构建、虚表和前后快照。
+移除“个人资料读取失败即未登录”的错误推断。
+成功返回 ret=0、online_status=1/0、is_online=true/false；读取失败返回 ret=-1、
+online_status=-1、is_online=null 及具体错误。scope=local_client_login 明确本机登录态范围；
+未实现服务端多设备在线列表或心跳可达性。
+测试使用 tools/online_info_test.cpp，复用生产注册与读取函数，覆盖模拟及只读实时 HTTP。
+
+本轮 getonlineinfo：Zig x64 编译、模拟账号读取得到登录/退出/错误构建、真实临时 HTTP 三态测试通过；
+重新枚举当前微信进程后，同一生产读取及临时 HTTP 验证通过，logged_in=1。
+
+### 3. Busif2fgetqrcodev2（未完成）
+
+src/MsgExtended.cpp 移除固定 payapp 通用 URL。原生请求入口、协议和业务结果尚未核验，
+现返回明确失败。失败保护不算实现。
+
+### 4. GetSelfAddress（未完成）
+
+移除昵称/手机号/地区拼接收货地址的路径。账号资料不等于收货地址列表；
+尚缺地址服务的请求构造、提交和响应映射，现返回明确失败。
+
+### 5. GetQRCode（未完成）
+
+移除无账号归属的缓存、全内存首条匹配和传入 URL 回显。
+普通本机静态字符串线索：URI RVA 0x9299080，Request/Response 名称
+RVA 0x96D0398/0x96D04A8；有限 MOV/LEA 引用搜索未找到入口，不证明功能不存在。
+尚未确认异步 scene、构造/销毁与字段，当前明确失败。SetQRCode 人工注入路径也被禁用。
+
+### 6. EditSelfNickname（新版未完成）
+
+保留旧版实现和严格构建校验，未将 4.1.15.13 偏移移植成新版常量。
+4.1.15.55 仍拒绝调用。需要独立核验新版 GetProfile/Oplog、codec、分配器与异步 ABI，
+再做账号关联及服务端回读；旧版实测不计入本轮完成项。
+
+### 7. mod_self_nick_signature（未完成）
+
+新增明确失败路由，无资料修改。待核验签名字段、更新协议及服务端回读；
+不得仅修改 account 缓存或回显 newSignature。
+
+### 8. upload_head_img（未完成）
+
+新增明确失败路由，无文件上传。待核验原生上传任务、输入文件所有权、
+异步完成和服务端头像回读；文件存在或提交成功不能代替业务完成。
+
+### 9. get_config_path（未完成）
+
+新增明确失败路由。尚未定位微信真实配置目录 getter；Hook 的 wx.ini 目录、
+代理 DLL 目录和系统 Documents/AppData 不能直接替代该接口。
+
+上述明确失败保护统一使用 include/PersonalInfoAvailability.h：ret=-1，
+implemented/submitted/verified=false；不当作完成的原生接口。
+本轮缺口及静态调查边界见 [九接口状态](personal-info-status-4.1.15.55.md)。
+GetSelfProfile.cpp 的本轮生产对象编译通过；完整 DLL 尚未构建部署。
+
+本轮最终检查：GetSelfProfile.cpp、MsgExtended.cpp 均由 Zig Windows x64 编译为新对象成功；
+接口集合 JSON 解析及 git diff --check 通过。完整 DLL 未构建部署。
