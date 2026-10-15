@@ -1,0 +1,262 @@
+{
+  "info": {
+    "_postman_id": "c8a88b0b-33cf-4f52-8f3f-411027000001",
+    "name": "WeChat-Hook 4.1.10.27 (ShowDoc标准兼容版)",
+    "description": "基于 ShowDoc 官方文档 (https://www.showdoc.com.cn/PCWeixinHook/11559060626558418) 适配的微信控制 API 集合。",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:30001",
+      "type": "string"
+    },
+    {
+      "key": "toid",
+      "value": "filehelper",
+      "type": "string"
+    },
+    {
+      "key": "image_path",
+      "value": "C:\\\\image.jpg",
+      "type": "string"
+    },
+    {
+      "key": "pic_src_path",
+      "value": "C:\\\\source.dat",
+      "type": "string"
+    },
+    {
+      "key": "pic_dst_path",
+      "value": "C:\\\\output.jpg",
+      "type": "string"
+    },
+    {
+      "key": "db_name",
+      "value": "MicroMsg.db",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. 发送文本消息 (SendTextMsg)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"toid\": \"{{toid}}\",\n  \"msg\": \"hello\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/SendTextMsg",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "SendTextMsg"
+          ]
+        },
+        "description": "发送文本消息。后台已做全兼容：toid（推荐）、wxid、wxidorgid 均可识别；内容 msg、content 均可识别。"
+      }
+    },
+    {
+      "name": "2. 发送图片消息 (SendImgMsg)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"toid\": \"{{toid}}\",\n  \"path\": \"{{image_path}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/SendImgMsg",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "SendImgMsg"
+          ]
+        },
+        "description": "发送本地图片。接收人字段支持 toid（推荐）、wxid、wxidorgid；路径字段支持 path（推荐）、image_path。"
+      }
+    },
+    {
+      "name": "3. 转发 XML 消息 (ForwardXMLMsg)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"to_wxid\": \"{{toid}}\",\n  \"content\": \"<msg>...</msg>\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/ForwardXMLMsg",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "ForwardXMLMsg"
+          ]
+        },
+        "description": "转发卡片、小程序、链接等 XML 消息。接收人支持 to_wxid / toid / wxid，内容支持 content / xml。"
+      }
+    },
+    {
+      "name": "4. 解码图片 DAT (Decode_Pic)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"src_path\": \"{{pic_src_path}}\",\n  \"dst_path\": \"{{pic_dst_path}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/Decode_Pic",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "Decode_Pic"
+          ]
+        },
+        "description": "解码微信本地加密图片 DAT 文件。"
+      }
+    },
+    {
+      "name": "5. 获取个人资料 (GetSelfProfile)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "{{base_url}}/GetSelfProfile",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "GetSelfProfile"
+          ]
+        },
+        "description": "获取当前登录账号的 wxid、昵称、手机号、地区等资料。"
+      }
+    },
+    {
+      "name": "6. 查询数据库 (QueryDB execute)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"optDbName\": \"{{db_name}}\",\n  \"SQL\": \"SELECT * FROM ChatRoom LIMIT 10\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/QueryDB/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "QueryDB",
+            "execute"
+          ]
+        },
+        "description": "进程内直查 SQLite 数据库。库名支持 optDbName / db_name，查询语句支持 SQL / sql。"
+      }
+    },
+    {
+      "name": "7. 获取所有数据库名 (QueryDB GetAllDBName)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "{{base_url}}/QueryDB/GetAllDBName",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "QueryDB",
+            "GetAllDBName"
+          ]
+        },
+        "description": "获取当前所有已挂载打开的数据库文件名称。"
+      }
+    },
+    {
+      "name": "8. 查询状态 (QueryDB status)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/QueryDB/status",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "QueryDB",
+            "status"
+          ]
+        },
+        "description": "查询登录状态和 Weixin.dll 模块基址。"
+      }
+    },
+    {
+      "name": "sns_like",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sns_id\": \"15027695064333161080\",\n  \"to_wxid\": \"wxid_0xexx8mmtng912\"\n}"
+        },
+        "url": "{{base_url}}/sns_like",
+        "description": "朋友圈点赞；sns_id 必须使用十进制字符串。verified=true 表示服务端业务确认；超时不自动重试。"
+      }
+    }
+  ]
+}
